@@ -4,11 +4,7 @@ use App\Http\Controllers\JobTypeController;
 use App\Http\Controllers\PrintJobController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-Route::redirect('/admin', '/admin/job-types');
+Route::redirect('/', '/admin/job-types');
 
 Route::resource('admin/job-types', JobTypeController::class)
     ->except(['show'])
