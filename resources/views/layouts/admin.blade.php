@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png">
     <title>@yield('title', config('app.name'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -11,7 +12,7 @@
         <header class="border-b border-slate-200 bg-white">
             <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
                 <a href="{{ route('admin.job-types.index') }}" class="flex items-center gap-2">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-sm font-semibold text-white">P</span>
+                    <img src="{{ asset('favicon.png') }}" alt="" class="h-8 w-8 rounded-md">
                     <span class="text-base font-semibold tracking-tight">{{ config('app.name') }}</span>
                 </a>
                 <nav class="text-sm">
