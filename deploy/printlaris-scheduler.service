@@ -1,0 +1,17 @@
+[Unit]
+Description=Printlaris Hub scheduler (pushes printers, pulls config every minute)
+Wants=network-online.target
+After=network-online.target cups.service
+
+[Service]
+Type=simple
+User=printlaris
+Group=printlaris
+WorkingDirectory=/opt/printlaris-hub
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

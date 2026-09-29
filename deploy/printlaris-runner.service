@@ -1,0 +1,19 @@
+[Unit]
+Description=Printlaris Hub API polling runner
+Wants=network-online.target
+After=network-online.target cups.service
+
+[Service]
+Type=simple
+User=printlaris
+Group=printlaris
+WorkingDirectory=/opt/printlaris-hub
+ExecStart=/usr/bin/php artisan printlaris:run
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=90
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

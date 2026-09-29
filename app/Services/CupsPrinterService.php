@@ -15,7 +15,7 @@ class CupsPrinterService
         $process = new Process(['lpstat', '-p', '-l']);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return collect();
         }
 
@@ -26,7 +26,7 @@ class CupsPrinterService
         foreach ($lines as $line) {
             $trimmed = trim($line);
 
-            if (preg_match('/^printer\s+(\S+)\s+is\s+(\S+)/i', $trimmed, $matches)) {
+            if (preg_match('/^printer\s+(\S+)\s+is\s+([a-z]+)/i', $trimmed, $matches)) {
                 if ($current !== null) {
                     $printers->push($current);
                 }
@@ -47,6 +47,7 @@ class CupsPrinterService
 
             if (preg_match('/^Description:\s*(.*)$/i', $trimmed, $matches)) {
                 $current['description'] = trim($matches[1]);
+
                 continue;
             }
 
@@ -60,5 +61,28 @@ class CupsPrinterService
         }
 
         return $printers->sortBy('name');
+    }
+
+    /**
+     * @return string|null The CUPS request id, e.g. "zebra-12".
+     */
+    public function submit(string $filePath, string $queue, int $copies = 1): ?string
+    {
+        $process = new Process(['lp', '-d', $queue, '-n', (string) max(1, $copies), $filePath]);
+        $process->setTimeout(60);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            $message = trim($process->getErrorOutput() ?: $process->getOutput());
+
+            throw new \RuntimeException(sprintf(
+                'The print job for %s could not be submitted to queue %s. Output: %s',
+                $filePath,
+                $queue,
+                $message,
+            ));
+        }
+
+        return preg_match('/request id is (\S+)/i', $process->getOutput(), $matches) === 1 ? $matches[1] : null;
     }
 }

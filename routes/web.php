@@ -1,20 +1,15 @@
 <?php
 
-use App\Http\Controllers\JobTypeController;
-use App\Http\Controllers\PrintJobController;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureHubIsNotSetUp;
+use App\Http\Middleware\EnsureHubIsSetUp;
+use App\Livewire\Dashboard;
+use App\Livewire\Login;
+use App\Livewire\Setup;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin/job-types');
+Route::livewire('setup', Setup::class)->middleware(EnsureHubIsNotSetUp::class)->name('setup');
 
-Route::resource('admin/job-types', JobTypeController::class)
-    ->except(['show'])
-    ->names([
-        'index' => 'admin.job-types.index',
-        'create' => 'admin.job-types.create',
-        'store' => 'admin.job-types.store',
-        'edit' => 'admin.job-types.edit',
-        'update' => 'admin.job-types.update',
-        'destroy' => 'admin.job-types.destroy',
-    ]);
+Route::livewire('login', Login::class)->middleware(EnsureHubIsSetUp::class)->name('login');
 
-Route::post('/print-jobs', [PrintJobController::class, 'store'])->name('print-jobs.store');
+Route::livewire('/', Dashboard::class)->middleware([EnsureHubIsSetUp::class, EnsureAdmin::class])->name('dashboard');
