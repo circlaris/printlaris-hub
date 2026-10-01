@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Services\HubCredentials;
 use App\Services\PrintlarisApiClient;
 use App\Services\StateStore;
+use App\Services\Zebra\ZebraPrinters;
 use Illuminate\Support\Carbon;
 use Livewire\Component;
 use Throwable;
@@ -21,6 +22,8 @@ class Dashboard extends Component
     public ?string $checkMessage = null;
 
     public bool $checkPassed = false;
+
+    public ?string $scanMessage = null;
 
     public function checkConnection(PrintlarisApiClient $api): void
     {
@@ -58,6 +61,13 @@ class Dashboard extends Component
         $this->checkMessage = 'The new key is valid and saved.';
     }
 
+    public function scanPrinters(ZebraPrinters $zebras): void
+    {
+        $found = count(array_filter($zebras->discover(), fn (array $printer): bool => $printer['online']));
+
+        $this->scanMessage = "Scan finished: {$found} label ".($found === 1 ? 'printer' : 'printers').' found.';
+    }
+
     public function logout(): mixed
     {
         session()->forget(EnsureAdmin::SESSION_KEY);
@@ -66,7 +76,7 @@ class Dashboard extends Component
         return $this->redirectRoute('login');
     }
 
-    public function render(HubCredentials $credentials, StateStore $state)
+    public function render(HubCredentials $credentials, StateStore $state, ZebraPrinters $zebras)
     {
         $connection = $state->read('connection');
         $lastContact = isset($connection['last_contact_at']) ? Carbon::parse($connection['last_contact_at']) : null;
@@ -81,7 +91,10 @@ class Dashboard extends Component
             'lastError' => $connection['last_error'] ?? null,
             'lastConfigPull' => isset($connection['last_config_pull_at']) ? Carbon::parse($connection['last_config_pull_at']) : null,
             'lastPrinterPush' => isset($printers['pushed_at']) ? Carbon::parse($printers['pushed_at']) : null,
-            'printers' => $printers['list'] ?? [],
+            'printers' => [
+                ...array_filter($printers['list'] ?? [], fn (array $printer): bool => ($printer['type'] ?? 'cups') !== 'zpl-tls'),
+                ...$zebras->report(),
+            ],
             'config' => $state->read('config'),
             'jobs' => $state->recentJobs(),
         ]);

@@ -52,13 +52,25 @@
     </section>
 
     <section class="card">
-        <h2>Printers</h2>
+        <div class="row">
+            <h2>Printers</h2>
+            <button type="button" class="secondary" wire:click="scanPrinters" wire:loading.attr="disabled" wire:target="scanPrinters">
+                <span wire:loading.remove wire:target="scanPrinters">Scan for label printers</span>
+                <span wire:loading wire:target="scanPrinters">Scanning…</span>
+            </button>
+        </div>
+        @if ($scanMessage)
+            <p class="muted">{{ $scanMessage }}</p>
+        @endif
         @forelse ($printers as $printer)
             <div class="row line">
                 <span>
                     <strong>{{ $printer['name'] }}</strong>
                     @if ($printer['description'])
                         <span class="muted">&middot; {{ $printer['description'] }}</span>
+                    @endif
+                    @if ($printer['address'] ?? null)
+                        <span class="muted">&middot; {{ $printer['address'] }}</span>
                     @endif
                 </span>
                 <span class="pill">{{ $printer['state'] }}</span>

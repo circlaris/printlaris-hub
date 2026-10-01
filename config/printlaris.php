@@ -12,4 +12,12 @@ return [
     'state_write_interval' => 10,
 
     'job_history_limit' => 50,
+
+    'zebra' => [
+        // Link-OS printers expose raw ZPL over TLS on 9143 when the plain port 9100 is closed.
+        'port' => (int) env('PRINTLARIS_ZEBRA_PORT', 9143),
+
+        // Comma-separated CIDRs (/22 or smaller); empty scans the subnets of the hub's own interfaces.
+        'subnets' => array_values(array_filter(array_map('trim', explode(',', (string) env('PRINTLARIS_DISCOVERY_SUBNETS', ''))))),
+    ],
 ];

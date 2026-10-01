@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Zebra\ZebraPrinters;
 use RuntimeException;
 
 class PrintJobProcessor
@@ -9,6 +10,7 @@ class PrintJobProcessor
     public function __construct(
         protected PrintlarisApiClient $api,
         protected CupsPrinterService $cups,
+        protected ZebraPrinters $zebras,
         protected StateStore $state,
     ) {}
 
@@ -23,6 +25,12 @@ class PrintJobProcessor
 
         try {
             $this->api->downloadJobFile($job['id'], $path);
+
+            if ($this->zebras->find($printer) !== null) {
+                $this->zebras->send($printer, (string) file_get_contents($path));
+
+                return ['printer' => $printer, 'cups_job' => null];
+            }
 
             return ['printer' => $printer, 'cups_job' => $this->cups->submit($path, $printer, $job['copies'])];
         } finally {
