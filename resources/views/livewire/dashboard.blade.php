@@ -54,7 +54,7 @@
     <section class="card">
         <div class="row">
             <h2>Printers</h2>
-            <button type="button" class="secondary" wire:click="scanPrinters" wire:loading.attr="disabled" wire:target="scanPrinters">
+            <button type="button" class="secondary small" wire:click="scanPrinters" wire:loading.attr="disabled" wire:target="scanPrinters">
                 <span wire:loading.remove wire:target="scanPrinters">Scan for label printers</span>
                 <span wire:loading wire:target="scanPrinters">Scanning…</span>
             </button>
