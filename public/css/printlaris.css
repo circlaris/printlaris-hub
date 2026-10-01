@@ -64,6 +64,14 @@ h2 {
     gap: 12px;
 }
 
+.head {
+    margin-bottom: 14px;
+}
+
+.head h2 {
+    margin: 0;
+}
+
 .stack {
     display: grid;
     gap: 14px;
