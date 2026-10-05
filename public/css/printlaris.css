@@ -39,6 +39,19 @@ body {
     font-weight: 600;
 }
 
+.brand-meta {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.brand-meta a {
+    color: inherit;
+}
+
 .card {
     margin-bottom: 16px;
     padding: 20px;

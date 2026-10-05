@@ -8,6 +8,31 @@ use Symfony\Component\Process\Process;
 class CupsPrinterService
 {
     /**
+     * Detect the LAN IP via the default route; UDP "connect" sends no packets.
+     */
+    public function lanIpAddress(): ?string
+    {
+        $socket = @stream_socket_client('udp://1.1.1.1:53', $errorCode, $errorMessage, 1);
+
+        if ($socket !== false) {
+            $localAddress = stream_socket_get_name($socket, false);
+            fclose($socket);
+
+            if (is_string($localAddress)) {
+                $ip = substr($localAddress, 0, strrpos($localAddress, ':') ?: null);
+
+                if (filter_var($ip, FILTER_VALIDATE_IP) && $ip !== '0.0.0.0') {
+                    return $ip;
+                }
+            }
+        }
+
+        $ip = gethostbyname(gethostname());
+
+        return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : null;
+    }
+
+    /**
      * @return Collection<int, array{name:string,state:string,description:?string,location:?string}>
      */
     public function listPrinters(): Collection
