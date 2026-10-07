@@ -8,6 +8,16 @@ use Symfony\Component\Process\Process;
 class CupsPrinterService
 {
     /**
+     * Web servers such as php-fpm start with a short PATH that lacks the sbin directories holding lpadmin and lpinfo.
+     *
+     * @param  list<string>  $command
+     */
+    public static function process(array $command): Process
+    {
+        return new Process($command, null, ['PATH' => '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']);
+    }
+
+    /**
      * Detect the LAN IP via the default route; UDP "connect" sends no packets.
      */
     public function lanIpAddress(): ?string
@@ -37,7 +47,7 @@ class CupsPrinterService
      */
     public function listPrinters(): Collection
     {
-        $process = new Process(['lpstat', '-p', '-l']);
+        $process = self::process(['lpstat', '-p', '-l']);
         $process->run();
 
         if (! $process->isSuccessful()) {
@@ -89,11 +99,68 @@ class CupsPrinterService
     }
 
     /**
+     * Creates (or repoints) a queue for an IPP printer: driverless where possible, otherwise with a driver matching the model.
+     */
+    public function ensureQueue(string $queue, string $uri, string $model = ''): void
+    {
+        $existing = self::process(['lpstat', '-v', $queue]);
+        $existing->run();
+
+        if ($existing->isSuccessful() && str_contains($existing->getOutput(), $uri)) {
+            return;
+        }
+
+        $process = $this->createQueue($queue, $uri, 'everywhere');
+
+        if (! $process->isSuccessful() && $model !== '') {
+            $driver = $this->driverFor($model);
+
+            if ($driver !== null) {
+                $process = $this->createQueue($queue, $uri, $driver);
+            }
+        }
+
+        if (! $process->isSuccessful()) {
+            throw new \RuntimeException(sprintf(
+                'The CUPS queue %s could not be created. Output: %s',
+                $queue,
+                trim($process->getErrorOutput() ?: $process->getOutput()),
+            ));
+        }
+    }
+
+    protected function createQueue(string $queue, string $uri, string $driver): Process
+    {
+        $process = self::process(['lpadmin', '-p', $queue, '-E', '-v', $uri, '-m', $driver]);
+        $process->setTimeout(60);
+        $process->run();
+
+        return $process;
+    }
+
+    protected function driverFor(string $model): ?string
+    {
+        $process = self::process(['lpinfo', '-l', '--make-and-model', $model, '-m']);
+        $process->setTimeout(60);
+        $process->run();
+
+        preg_match_all('/^Model:\s+name = (.+)$/m', $process->getOutput(), $matches);
+
+        foreach ($matches[1] as $driver) {
+            if (trim($driver) !== 'everywhere') {
+                return trim($driver);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return string|null The CUPS request id, e.g. "zebra-12".
      */
     public function submit(string $filePath, string $queue, int $copies = 1): ?string
     {
-        $process = new Process(['lp', '-d', $queue, '-n', (string) max(1, $copies), $filePath]);
+        $process = self::process(['lp', '-d', $queue, '-n', (string) max(1, $copies), $filePath]);
         $process->setTimeout(60);
         $process->run();
 

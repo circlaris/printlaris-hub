@@ -24,7 +24,7 @@ class PrintlarisCommandsTest extends TestCase
     public function test_printers_are_pushed_and_remembered(): void
     {
         $this->configureHub();
-        $printers = [['name' => 'zebra', 'state' => 'idle', 'description' => null, 'location' => null]];
+        $printers = [['name' => 'zebra', 'state' => 'idle', 'description' => null, 'location' => null, 'type' => 'cups', 'address' => null]];
         $this->mock(CupsPrinterService::class)->shouldReceive('listPrinters')->andReturn(collect($printers));
         Http::fake(['circlaris.test/printlaris/client/printers' => Http::response(status: 204)]);
 

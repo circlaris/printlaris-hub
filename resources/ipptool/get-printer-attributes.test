@@ -1,0 +1,17 @@
+{
+	NAME "Get printer attributes"
+	VERSION 1.0
+	OPERATION Get-Printer-Attributes
+	GROUP operation-attributes-tag
+	ATTR charset attributes-charset utf-8
+	ATTR language attributes-natural-language en
+	ATTR uri printer-uri $uri
+	ATTR keyword requested-attributes printer-name,printer-make-and-model,printer-uuid,printer-state,document-format-supported
+	STATUS successful-ok
+	STATUS successful-ok-ignored-or-substituted-attributes
+	DISPLAY printer-name
+	DISPLAY printer-make-and-model
+	DISPLAY printer-uuid
+	DISPLAY printer-state
+	DISPLAY document-format-supported
+}

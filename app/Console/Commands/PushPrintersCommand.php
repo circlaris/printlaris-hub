@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\CupsPrinterService;
 use App\Services\HubCredentials;
+use App\Services\Ipp\IppPrinters;
 use App\Services\PrintlarisApiClient;
 use App\Services\StateStore;
 use App\Services\Zebra\ZebraPrinters;
@@ -20,6 +21,7 @@ class PushPrintersCommand extends Command
         HubCredentials $credentials,
         CupsPrinterService $cups,
         ZebraPrinters $zebras,
+        IppPrinters $ipp,
         PrintlarisApiClient $api,
         StateStore $state,
     ): int {
@@ -27,9 +29,17 @@ class PushPrintersCommand extends Command
             return self::SUCCESS;
         }
 
+        $ippPrinters = $ipp->known();
+
+        // Queues auto-created for IPP printers are already reported as ipp printers.
         $printers = [
-            ...$cups->listPrinters()->map(fn (array $printer): array => [...$printer, 'type' => 'cups', 'address' => null])->values()->all(),
+            ...$cups->listPrinters()
+                ->reject(fn (array $printer): bool => isset($ippPrinters[$printer['name']]))
+                ->map(fn (array $printer): array => [...$printer, 'type' => 'cups', 'address' => null])
+                ->values()
+                ->all(),
             ...$zebras->report(),
+            ...$ipp->report(),
         ];
 
         try {

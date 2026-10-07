@@ -13,6 +13,13 @@ return [
 
     'job_history_limit' => 50,
 
+    'ipp' => [
+        'port' => (int) env('PRINTLARIS_IPP_PORT', 631),
+
+        // Resource paths to try; IPP Everywhere printers use /ipp/print, older Brother models /ipp.
+        'paths' => array_values(array_filter(array_map('trim', explode(',', (string) env('PRINTLARIS_IPP_PATHS', '/ipp/print,/ipp'))))),
+    ],
+
     'zebra' => [
         // Link-OS printers expose raw ZPL over TLS on 9143 when the plain port 9100 is closed.
         'port' => (int) env('PRINTLARIS_ZEBRA_PORT', 9143),

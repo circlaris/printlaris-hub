@@ -4,6 +4,8 @@ namespace App\Livewire;
 
 use App\Http\Middleware\EnsureAdmin;
 use App\Services\HubCredentials;
+use App\Services\Ipp\IppPrinters;
+use App\Services\PrintJobProcessor;
 use App\Services\PrintlarisApiClient;
 use App\Services\StateStore;
 use App\Services\Zebra\ZebraPrinters;
@@ -24,6 +26,23 @@ class Dashboard extends Component
     public bool $checkPassed = false;
 
     public ?string $scanMessage = null;
+
+    public ?string $testMessage = null;
+
+    public bool $testPassed = false;
+
+    public function printTestPage(string $printer, PrintJobProcessor $processor): void
+    {
+        try {
+            $processor->printTestPage($printer);
+
+            $this->testPassed = true;
+            $this->testMessage = "Test page sent to {$printer}.";
+        } catch (Throwable $exception) {
+            $this->testPassed = false;
+            $this->testMessage = $exception->getMessage();
+        }
+    }
 
     public function checkConnection(PrintlarisApiClient $api): void
     {
@@ -61,11 +80,12 @@ class Dashboard extends Component
         $this->checkMessage = 'The new key is valid and saved.';
     }
 
-    public function scanPrinters(ZebraPrinters $zebras): void
+    public function scanPrinters(ZebraPrinters $zebras, IppPrinters $ipp): void
     {
-        $found = count(array_filter($zebras->discover(), fn (array $printer): bool => $printer['online']));
+        $online = fn (array $printer): bool => $printer['online'];
+        $found = count(array_filter($zebras->discover(), $online)) + count(array_filter($ipp->discover(), $online));
 
-        $this->scanMessage = "Scan finished: {$found} label ".($found === 1 ? 'printer' : 'printers').' found.';
+        $this->scanMessage = "Scan finished: {$found} ".($found === 1 ? 'printer' : 'printers').' found.';
     }
 
     public function logout(): mixed
@@ -76,7 +96,7 @@ class Dashboard extends Component
         return $this->redirectRoute('login');
     }
 
-    public function render(HubCredentials $credentials, StateStore $state, ZebraPrinters $zebras)
+    public function render(HubCredentials $credentials, StateStore $state, ZebraPrinters $zebras, IppPrinters $ipp)
     {
         $connection = $state->read('connection');
         $lastContact = isset($connection['last_contact_at']) ? Carbon::parse($connection['last_contact_at']) : null;
@@ -92,8 +112,9 @@ class Dashboard extends Component
             'lastConfigPull' => isset($connection['last_config_pull_at']) ? Carbon::parse($connection['last_config_pull_at']) : null,
             'lastPrinterPush' => isset($printers['pushed_at']) ? Carbon::parse($printers['pushed_at']) : null,
             'printers' => [
-                ...array_filter($printers['list'] ?? [], fn (array $printer): bool => ($printer['type'] ?? 'cups') !== 'zpl-tls'),
+                ...array_filter($printers['list'] ?? [], fn (array $printer): bool => ($printer['type'] ?? 'cups') === 'cups'),
                 ...$zebras->report(),
+                ...$ipp->report(),
             ],
             'config' => $state->read('config'),
             'jobs' => $state->recentJobs(),

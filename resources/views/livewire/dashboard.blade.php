@@ -55,28 +55,31 @@
         <div class="row head">
             <h2>Printers</h2>
             <button type="button" class="secondary small" wire:click="scanPrinters" wire:loading.attr="disabled" wire:target="scanPrinters">
-                <span wire:loading.remove wire:target="scanPrinters">Scan for label printers</span>
+                <span wire:loading.remove wire:target="scanPrinters">Scan for printers</span>
                 <span wire:loading wire:target="scanPrinters">Scanning…</span>
             </button>
         </div>
         @if ($scanMessage)
             <p class="muted">{{ $scanMessage }}</p>
         @endif
+        @if ($testMessage)
+            <p class="{{ $testPassed ? 'ok-text' : 'error' }}">{{ $testMessage }}</p>
+        @endif
         @forelse ($printers as $printer)
             <div class="row line">
                 <span>
-                    <strong>{{ $printer['name'] }}</strong>
-                    @if ($printer['description'])
-                        <span class="muted">&middot; {{ $printer['description'] }}</span>
-                    @endif
+                    <strong>{{ $printer['description'] ?: $printer['name'] }}</strong>
                     @if ($printer['address'] ?? null)
                         <span class="muted">&middot; {{ $printer['address'] }}</span>
                     @endif
                 </span>
-                <span class="pill">{{ $printer['state'] }}</span>
+                <span class="row">
+                    <span class="pill">{{ $printer['state'] }}</span>
+                    <button type="button" class="secondary small" wire:click="printTestPage('{{ $printer['name'] }}')" wire:loading.attr="disabled" wire:target="printTestPage" @disabled($printer['state'] === 'offline')>Print test page</button>
+                </span>
             </div>
         @empty
-            <p class="muted">No CUPS printers reported yet.</p>
+            <p class="muted">No printers reported yet.</p>
         @endforelse
     </section>
 

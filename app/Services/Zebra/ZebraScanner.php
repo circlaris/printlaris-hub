@@ -104,9 +104,38 @@ class ZebraScanner
 
         preg_match_all('/inet (\d+\.\d+\.\d+\.\d+)\/(\d+)/', $process->getOutput(), $matches, PREG_SET_ORDER);
 
+        if ($matches === []) {
+            $matches = $this->ifconfigAddresses();
+        }
+
         return array_values(array_unique(array_map(
             fn (array $match): string => $match[1].'/'.max(24, (int) $match[2]),
             $matches,
         )));
+    }
+
+    /**
+     * macOS has no `ip`; read `ifconfig` instead.
+     *
+     * @return list<array{0: string, 1: string, 2: string}>
+     */
+    protected function ifconfigAddresses(): array
+    {
+        $process = new Process(['/sbin/ifconfig']);
+        $process->run();
+
+        preg_match_all('/inet (\d+\.\d+\.\d+\.\d+) netmask 0x([0-9a-f]{8})/', $process->getOutput(), $found, PREG_SET_ORDER);
+
+        $addresses = [];
+
+        foreach ($found as [, $ip, $mask]) {
+            if (str_starts_with($ip, '127.') || str_starts_with($ip, '169.254.')) {
+                continue;
+            }
+
+            $addresses[] = ["{$ip}/", $ip, (string) substr_count(decbin((int) hexdec($mask)), '1')];
+        }
+
+        return $addresses;
     }
 }

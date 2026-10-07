@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Ipp\IppPrinters;
 use App\Services\Zebra\ZebraPrinters;
 use RuntimeException;
 
@@ -11,7 +12,9 @@ class PrintJobProcessor
         protected PrintlarisApiClient $api,
         protected CupsPrinterService $cups,
         protected ZebraPrinters $zebras,
+        protected IppPrinters $ipp,
         protected StateStore $state,
+        protected TestPage $testPage,
     ) {}
 
     /**
@@ -26,18 +29,48 @@ class PrintJobProcessor
         try {
             $this->api->downloadJobFile($job['id'], $path);
 
-            if ($this->zebras->find($printer) !== null) {
-                $this->zebras->send($printer, (string) file_get_contents($path));
-
-                return ['printer' => $printer, 'cups_job' => null];
-            }
-
-            return ['printer' => $printer, 'cups_job' => $this->cups->submit($path, $printer, $job['copies'])];
+            return ['printer' => $printer, 'cups_job' => $this->dispatch($printer, $path, $job['copies'])];
         } finally {
             if (is_file($path)) {
                 unlink($path);
             }
         }
+    }
+
+    /**
+     * @return string|null The job id of the print system, if it reports one.
+     */
+    public function printTestPage(string $printer): ?string
+    {
+        $this->assertValidPrinterName($printer);
+
+        $isZebra = $this->zebras->find($printer) !== null;
+        $path = $this->temporaryPath($isZebra ? 'test.zpl' : 'test.pdf');
+
+        try {
+            file_put_contents($path, $isZebra ? $this->testPage->zpl($printer) : $this->testPage->pdf($printer));
+
+            return $this->dispatch($printer, $path, 1);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
+    protected function dispatch(string $printer, string $path, int $copies): ?string
+    {
+        if ($this->zebras->find($printer) !== null) {
+            $this->zebras->send($printer, (string) file_get_contents($path));
+
+            return null;
+        }
+
+        if ($this->ipp->find($printer) !== null) {
+            return $this->ipp->print($printer, $path, $copies);
+        }
+
+        return $this->cups->submit($path, $printer, $copies);
     }
 
     /**
@@ -61,12 +94,17 @@ class PrintJobProcessor
             throw new RuntimeException('No printer could be resolved for this job.');
         }
 
+        $this->assertValidPrinterName($printer);
+
+        return $printer;
+    }
+
+    protected function assertValidPrinterName(string $printer): void
+    {
         // Rejects names that lp could read as options.
         if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_.\-]*$/', $printer) !== 1) {
             throw new RuntimeException('The printer name is not a valid CUPS queue name.');
         }
-
-        return $printer;
     }
 
     protected function temporaryPath(string $filename): string
